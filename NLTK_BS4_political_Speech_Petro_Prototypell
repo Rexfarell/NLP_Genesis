@@ -1,0 +1,111 @@
+# -*- coding: utf-8 -*-
+
+#Created on Tue Aug 21 11:52:01 2018
+
+#@author: Rexfarell
+
+
+#revisar dependencias
+import nltk
+import re, pprint
+from urllib import request
+from bs4 import BeautifulSoup as bs
+from nltk import word_tokenize, sent_tokenize
+import requests
+from nltk.text import Text
+from nltk.probability import FreqDist 
+from nltk.corpus import stopwords
+from nltk import corpus
+
+#_____________________________________________________________________________________________________________________________
+stop_words = (stopwords.words("spanish"))
+print("los stopwords al empezar son: ", len(stop_words))
+##____________________________________________________________________________________________________________________________
+##agrega los terminos de la lista words_to_add a los stop_words
+words_to_add=["bolívarwindow.tabbola_type","article","=","cada","-",",",".","aquí", "https","www","unas","unos",'xml', 'encoding',  'utf', 'url', 'http', 'gov', 'co', 'discursos2010', '/', 'turistica_24022010', 'html', '</', 'url', '>', '<', '></', '<', 'turistica_24022010',  '>']
+for w in words_to_add:
+   if w not in stop_words:
+        stop_words.append(w)
+
+##____________________________________________________________________________________________________________________________
+##Remueve los terminos de la lista words_to_remove quitándolos de stopwords
+       
+words_to_remove=["yo", "no"]
+for w in words_to_remove:
+   if w in stop_words:
+        stop_words.remove(w)        
+#______________________________________________________________________________________________________________________________
+
+
+
+
+#______________________________________________________________________________________________________________________________
+
+
+
+print("El número de stopwords al finalizar son:", len(stop_words))
+
+
+
+
+
+
+#Alternative web scrapping method to circumvent the bad request error!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+headers = { 'User-Agent': 'Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)     Chrome/37.0.2049.0 Safari/537.36'}
+
+
+r = requests.get("https://www.elespectador.com/noticias/bogota/el-discurso-completo-de-gustavo-petro-plaza-de-bolivar-articulo-463248", headers=headers)
+print (r)
+print ("headers",r.headers)
+
+
+url= "https://www.elespectador.com/noticias/bogota/el-discurso-completo-de-gustavo-petro-plaza-de-bolivar-articulo-463248"
+
+
+
+
+html = request.urlopen(url).read().decode("utf8")
+html[:10000]
+#If you only want the text part of a document or tag, you can use the get_text() method.
+#It returns all the text in a document or beneath a tag, as a single Unicode string:
+raw=bs(html, "html.parser").get_text()
+
+print("El número de palabras contenidas en el texto antes de filtrarlo son:" ,len(raw))
+
+
+tokens= word_tokenize(raw)
+
+##This still contains unwanted material concerning site navigation and related stories. 
+##With some trial and error you can find the start and end indexes of the content 
+##and select the tokens of interest, and initialize a text as before.
+
+tokens=tokens[4888:8194]
+print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@",tokens)
+
+
+#This still contains unwanted material concerning site navigation and related stories. 
+#With some trial and error you can find the start and end indexes of the content and select 
+#the tokens of interest, and initialize a text as before.
+#print (raw[20117:37210])
+#tokens = tokens[20117:37210]
+
+text=Text(tokens)
+
+
+print("Yeah, Concordance baby: >>>>>>>>>>>", end=" " )
+print( text.concordance("no"))
+print("Similares a libertad:",text.similar('libertad'))
+
+text.dispersion_plot(["Uribe", "bogotá","libertad", "Colombia", "fascismo","guerra", "defensa","violencia", "codicia", "Farc", "paz","esperanza", "compromiso","democracia", "armas", "muerte", "yo"])
+
+content_filtered=([word.lower() for word in tokens if word not in stop_words])
+fdist=FreqDist(content_filtered).most_common(10)
+print(fdist)
+
+text_lines=Text(content_filtered)
+#print("las palabras que son eliminadas del texto son: ", stop_words)
+print("El número de palabras contenidas en el texto después de filtrarlo de stopwords son:\
+", len(content_filtered))
+
+print("Muestra de palabras en minuscula y sin stopwords",[content_filtered[:10]])
+Text(content_filtered).plot(10)

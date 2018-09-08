@@ -1,0 +1,173 @@
+
+from nltk.probability import ConditionalFreqDist
+from nltk.corpus.reader import CategorizedPlaintextCorpusReader
+from nltk.tokenize import word_tokenize
+from nltk.text import Text
+from nltk.corpus import stopwords
+
+noise_words=(stopwords.words("spanish"))
+print("Los stopwords al empezar son: ", len(noise_words))
+
+# This block of code costumizes the stopwords that are going to be removed by manually adding words to the list
+#depending on your needs.
+words_to_add=["?>",'"','?>','version','mil','año','años','‘','si','la','hoy','en','el','–','?','¿','(',';','y',':','.',',','=','aspx','wsp','=',\
+'www','unas','xml','encoding', 'utf', 'url', 'http', 'gov', 'co', 'discursos2010', '/', 'turistica_24022010', 'html', '</',\
+'url', '>', '<', '></', '<', 'turistica_24022010',  '>','<?', '</','titulo', "Empleo" ]
+for w in words_to_add:
+   if w not in noise_words:
+        noise_words.append(w)
+
+#You can also remove some of the pre-established words by removing them from stopwords.
+words_to_remove=[]
+for w in words_to_remove:
+   if w in noise_words:
+        noise_words.remove(w)
+
+print(noise_words)        
+#Para usar un corpus categorizado lo mas conveniente es tener dos archivos al menos. cada uno corresponde a una categoria diferente, pero deben compartir el mismo
+#nombre, con la unica excepcion de la categoria. ejemplo "Archivo_positivo" "Archivo_negativo"
+#La RE (regular expresion)    _(\w+) se encarga de tomar la parte del nombre del archivo que va entre la extension (.txt) y el _  y usarlo como categoria. 
+###"The first two arguments to CategorizedPlaintextCorpusReader are the root directory and fileids,
+##which are passed on to the PlaintextCorpusReader class to read in the files.
+##The cat_pattern keyword argument is a regular expression for extracting the category names from the fileids arguments."
+##In our project, the category is the part of the fileid argument after speeches_ and before .txt. "The category must be surrounded by grouping parenthesis."
+#tomado de "Natural Language Processing: Python and NLTK"
+
+
+corpus_root= r"C:\Users\Rexfarell\Desktop\LatinamericanTextResources-master\corpora"
+reader=CategorizedPlaintextCorpusReader(corpus_root,r"speeches_.*\.xml",cat_pattern=r"speeches_(\w+)\.xml")
+print("Los archivos contenidos son:", reader.fileids())
+
+#shows the categories
+print("Las categorias son: ",reader.categories())
+
+#The files of the corpus corresponding to each category (input the categories to retrieve the corresponding files)
+print("El archivo (fileids) que corresponde a la categoria Uribismos son:", reader.fileids(["Uribismos"]))
+print("El archivo (fileids) que corresponde a la categoria Santismos son:", reader.fileids(["Santismos"]))
+
+
+#assigns the texts to a variable
+santos=reader.words("speeches_Santismos.xml")
+uribe=reader.words("speeches_Uribismos.xml")
+
+#checks for the length of the text in total words (tokens)
+tokens_uribe=len(uribe)
+print("Numero de palabras en los discursos de Uribe: ",tokens_uribe)
+tokens_santos=len(santos)
+print("Numero de palabras en los discursos de Santos: ", tokens_santos)
+
+#Palabras que no se repiten (types)
+types_uribe=len(set(uribe))
+print("Numero de palabras que no se repiten en Uribe",types_uribe)
+types_santos=len(set(santos))
+print("Numero de palabras que no se repiten en Santos", types_santos)
+
+
+#lexical_richness= tokens/word_types
+# the number indicates how many times in average a word repeats. for example 30.8899
+#would mean each word tend to appear 30 times in the text. Also the higher the number
+#the less lexically diverse the text is. 
+
+riqueza_lexical_uribe=tokens_uribe/types_uribe
+print("La riqueza lexical de Uribe, es decir, el numero de veces en promedio que repite una palabra, es:  ",riqueza_lexical_uribe)
+
+
+riqueza_lexical_santos=tokens_santos/types_santos
+
+print("La riqueza lexical de Santos, es decir, el numero de veces en promedio que repite una palabra, es:  ",riqueza_lexical_santos)
+
+
+if riqueza_lexical_santos <  riqueza_lexical_uribe:
+    print("la riqueza lexical de Santos es mayor que la de Uribe")
+else:
+        print("la riqueza lexical de Uribe es mayor que la de Santos")
+
+
+#This block normalizes the content of reader by settin it on lowercase
+#and removing the words that do not have much semantic meaning
+#The result is finally stored in the bigram category_word. It will contain the conditions and the events
+category_word = [ (category, word.lower())
+for category in ["Uribismos","Santismos"]
+for word in reader.words(categories=category)
+if word not in noise_words]
+
+#Aftterwards the conditional Frequency Distribution can be applied to the bigram. 
+cfdist=ConditionalFreqDist(category_word)
+# As a consequence both texts can be accessed by using their indexes, however the set of speeches
+#that is to be first in this case is Santos', because it is the first in the corpus folder,
+#so we can access the corresponding corpora in the following manner:
+print("Muestra de las primeras 25 palabras en @@@@@@Santos:",category_word[-50:])
+print("Muestra de las primeras 25 palabras en @@@@@@Uribe:",category_word[:50])
+
+
+
+
+#In order to apply the concordance method we need the Text class
+reader=reader.words()
+reader=(Text(reader))
+#After exploring the prints we find a word that happens a limited ammount of times in both presidents, we decide to locate it
+#exactly in the corpora by looking for its index, and subsequently we print the contexts in which they appear for both presidents
+
+
+print("Index de la palabra drogadicto", reader.index("drogadicto"))
+print("contextos de la palabra \"drogadicto\" ", reader.concordance("drogadicto", width=80, lines=15) )
+
+
+print("Top20 de Uribe",cfdist ["Uribismos"].most_common(20))
+print("Top20 de Santos",cfdist ["Santismos"].most_common(20))
+print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!numero de Hapaxes en Santos",len(cfdist ["Santismos"].hapaxes()))
+print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!numero de Hapaxes en Uribe",len(cfdist ["Uribismos"].hapaxes()))
+print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\
+!!!!!!!!!!!20 Hapaxes de Uribe",cfdist ["Uribismos"].hapaxes()[0:20])
+print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\
+!!!!!!!!!!!20 Hapaxes de Santos",cfdist ["Santismos"].hapaxes()[0:20])
+
+print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\
+!!!!!!!!!!!En Santos el termino guerra aparece:", cfdist["Santismos"]["guerra"])
+print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\
+!!!!!!!!!!!!En Uribe el termino guerra aparece:", cfdist["Uribismos"]["guerra"])
+ 
+
+palabras_de_interes=["drogadicto","dios", "patria", "colombia","guerra","paz","educación", "salud","trabajo","comunismo"]
+cfdist.tabulate(conditions=["Uribismos","Santismos"],samples=palabras_de_interes)
+cfdist.plot(conditions=["Uribismos","Santismos"],samples=palabras_de_interes,cumulative=False)
+cfdist.plot(conditions=["Uribismos","Santismos"],samples=palabras_de_interes,cumulative=True)
+
+
+
+print("Los stopwords al finalizar son: ", len(noise_words))
+
+
+
+
+print("El número de palabras largas en los discursos de Uribe sin normalizar son: ",len([w for w in cfdist ["Uribismos"] if len(w)>20]))
+print("El número de palabras largas en los discursos de Santos sin normalizar son: ",len([w for w in cfdist["Santismos"] if len(w)>17 ]))
+palabras_largasUribe = [w for w in cfdist ["Uribismos"] if len(w)>20]
+palabras_largasSantos =[w for w in cfdist["Santismos"] if len(w)>17]
+print("Sample of long words in Uribe : ", palabras_largasUribe[:20])
+print("Sample of long words in Santos : ", palabras_largasSantos[:20])
+
+
+
+
+#Esta línea arroja una cifra que nos dice en comparación con la totalidad del texto cual es la representación de la palabra en cuestión.
+print("Proporción de la palabra colombia: ",cfdist["Uribismos"].freq("colombia"))
+#Esta línea arroja una cifra que nos dice en comparación con la totalidad del texto cual es la representación de la palabra en cuestión.
+print("Proporción de la palabra comunismo: ",cfdist["Uribismos"].freq("comunismo"))
+print("Proporción de la palabra Death: ",cfdist["Uribismos"].freq("Death"))
+print(cfdist["Santismos"].freq("por"))
+
+print("max: ",cfdist["Uribismos"].max())
+
+print(category_word[570000])
+milista=[]
+for w in cfdist["Uribismos"]:
+    if w=="comunismo":
+        print(milista.append(w))  
+    if w!="comunismo":
+        break  
+
+
+        
+    print(milista)
+print(len(milista))
